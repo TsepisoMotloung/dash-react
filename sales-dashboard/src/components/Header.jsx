@@ -23,9 +23,9 @@ const DashboardHeader = ({ userRole, userCode, onLogout, onExport }) => {
             <div className="bg-white bg-opacity-20 backdrop-blur-sm p-3 rounded-xl">
               <TrendingUp className="w-8 h-8 text-yellow-300" />
             </div>
-            <h1 className="text-4xl font-bold text-white drop-shadow-lg">Sales Analytics Dashboard</h1>
+            <h1 className="text-4xl font-bold text-white drop-shadow-lg">BI Dashboards</h1>
           </div>
-          <p className="text-blue-100 text-lg ml-1">Interactive visualization of sales performance and insights</p>
+          <p className="text-blue-100 text-lg ml-1">Interactive visualization of Business Intelligence Dashboards</p>
         </div>
 
         <div className="flex items-center gap-4">

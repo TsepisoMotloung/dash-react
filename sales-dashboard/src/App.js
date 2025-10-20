@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import Plotly from 'plotly.js-dist';
 import { dataUtils } from './utils/dataUtils';
 import { calculationUtils } from './utils/calculationUtils';
 import { chartUtils } from './utils/chartUtils';
-import { FilterSection, DashboardHeader, LoginForm, MetricsCards, StatsPanel, ComparisonMetricsCards, Breakdown } from './components';
-import { Menu, X, TrendingUp,Users, TrendingDown, BarChart3, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChartTabs, FilterSection, DashboardHeader, LoginForm, MetricsCards, StatsPanel, ComparisonMetricsCards, Breakdown } from './components';
+import { Menu, X, TrendingUp, Calendar, Package, Sunset, MapPin, Users, TrendingDown, BarChart3, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 
 const SalesDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -385,11 +386,31 @@ const SalesDashboard = () => {
             )}
           </div>
             
+          {/* OVERVIEW TAB */}
           {activeTab === 'overview' && (
-            <MetricsCards metrics={metrics} />
+            <>
+              <MetricsCards metrics={metrics} />
+              
+              {/* Revenue & Volume Overview Chart */}
+              <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                {!filteredData || filteredData.length === 0 ? (
+                  <div className="flex items-center justify-center h-96">
+                    <div className="text-center">
+                      <p className="text-gray-600 text-xl">No data available</p>
+                      <p className="text-gray-500 text-sm mt-2">Try adjusting your filters</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div id="chart" className="w-full" style={{ height: '600px' }}></div>
+                )}
+              </div>
+              
+              <StatsPanel filteredData={filteredData} userRole={userRole} />
+            </>
           )}
 
-          {activeTab === 'comparison' ? (
+          {/* COMPARISON TAB */}
+          {activeTab === 'comparison' && (
             <>
               <ComparisonMetricsCards
                 data={filteredData}
@@ -426,7 +447,15 @@ const SalesDashboard = () => {
                 </div>
               </div>
             </>
-          ) : (
+          )}
+
+          {/* BREAKDOWN TAB */}
+          {activeTab === 'breakdown' && (
+            <Breakdown filteredData={filteredData} />
+          )}
+
+          {/* OTHER TABS (agents, forecast, etc.) */}
+          {activeTab !== 'overview' && activeTab !== 'comparison' && activeTab !== 'breakdown' && (
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
               {!data ? (
                 <div className="flex items-center justify-center h-96">
@@ -453,14 +482,6 @@ const SalesDashboard = () => {
                 <div id="chart" className="w-full" style={{ height: '600px' }}></div>
               )}
             </div>
-          )}
-
-          {activeTab === 'overview' && (
-            <StatsPanel filteredData={filteredData} userRole={userRole} />
-          )}
-
-          {activeTab === 'breakdown' && (
-            <Breakdown filteredData={filteredData} />
           )}
         </div>
       </main>
