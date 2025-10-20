@@ -1,11 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import * as XLSX from 'xlsx';
-import Plotly from 'plotly.js-dist';
-import { Lock, UserCheck, Filter, LogOut, Download, TrendingUp, Users, DollarSign } from 'lucide-react';
-import {dataUtils} from '../utils/dataUtils';
 
-
-// ============= CHART TABS COMPONENT =============
 const ChartTabs = ({ activeTab, setActiveTab }) => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: '📊' },

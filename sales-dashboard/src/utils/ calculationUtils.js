@@ -2,6 +2,145 @@
 
 export const calculationUtils = {
   /**
+   * Calculate moving average for a time series
+   * @param {Array} data - Array of [date, value] pairs
+   * @param {number} periods - Number of periods for moving average
+   * @returns {Array} Array of [date, avgValue] pairs
+   */
+  calculateMovingAverage: (data, periods) => {
+    if (!data || data.length < periods) return [];
+    
+    const result = [];
+    for (let i = periods - 1; i < data.length; i++) {
+      const sum = data.slice(i - periods + 1, i + 1).reduce((acc, [_, val]) => acc + val, 0);
+      result.push([data[i][0], sum / periods]);
+    }
+    return result;
+  },
+
+  /**
+   * Calculate period-over-period comparisons for revenue and volume
+   * @param {Array} data - Full dataset
+   * @param {string} date - Target date (YYYY-MM)
+   * @param {string} compareType - 'mom' (month), 'qoq' (quarter), 'yoy' (year), or 'ytd'
+   * @returns {Object} Comparison metrics for revenue and volume
+   */
+  calculatePeriodComparison: (data, date, compareType = 'mom') => {
+    if (!data || data.length === 0 || !date) return null;
+
+    const [year, month] = date.split('-').map(Number);
+    const targetDate = new Date(year, month - 1);
+    
+    // Helper to get start/end dates for a period
+    const getPeriodDates = (date, type) => {
+      const start = new Date(date);
+      const end = new Date(date);
+      
+      switch (type) {
+        case 'mom':
+          end.setMonth(end.getMonth() + 1);
+          break;
+        case 'qoq':
+          start.setMonth(Math.floor(start.getMonth() / 3) * 3);
+          end.setMonth(Math.floor(end.getMonth() / 3) * 3 + 3);
+          break;
+        case 'yoy':
+          start.setMonth(0);
+          end.setMonth(12);
+          break;
+        case 'ytd':
+          start.setMonth(0);
+          break;
+      }
+      return [start, end];
+    };
+
+    // Get current period data
+    const [currentStart, currentEnd] = getPeriodDates(targetDate, compareType);
+    const currentData = data.filter(row => 
+      row.Date >= currentStart && row.Date < currentEnd
+    );
+
+    // Get previous period data
+    const prevDate = new Date(targetDate);
+    switch (compareType) {
+      case 'mom': prevDate.setMonth(prevDate.getMonth() - 1); break;
+      case 'qoq': prevDate.setMonth(prevDate.getMonth() - 3); break;
+      case 'yoy': prevDate.setFullYear(prevDate.getFullYear() - 1); break;
+      case 'ytd': prevDate.setFullYear(prevDate.getFullYear() - 1); break;
+    }
+    
+    const [prevStart, prevEnd] = getPeriodDates(prevDate, compareType);
+    const previousData = data.filter(row => 
+      row.Date >= prevStart && row.Date < prevEnd
+    );
+
+    // Calculate metrics
+    const calcPeriodMetrics = (data) => ({
+      revenue: data.reduce((sum, row) => sum + (row['Total Revenue'] || 0), 0),
+      volume: data.reduce((sum, row) => sum + (row['Sales Volume'] || 0), 0)
+    });
+
+    const current = calcPeriodMetrics(currentData);
+    const previous = calcPeriodMetrics(previousData);
+
+    // Calculate growth percentages
+    const calcGrowth = (curr, prev) => 
+      prev > 0 ? ((curr - prev) / prev) * 100 : curr > 0 ? 100 : 0;
+
+    return {
+      current,
+      previous,
+      growth: {
+        revenue: calcGrowth(current.revenue, previous.revenue),
+        volume: calcGrowth(current.volume, previous.volume)
+      },
+      periodLabel: {
+        mom: 'vs. Previous Month',
+        qoq: 'vs. Previous Quarter',
+        yoy: 'vs. Previous Year',
+        ytd: 'Year-to-Date Growth'
+      }[compareType]
+    };
+  },
+
+  /**
+   * Get monthly time series with moving averages
+   * @param {Array} data - Full dataset
+   * @param {string} metric - 'revenue' or 'volume'
+   * @returns {Object} Time series data with moving averages
+   */
+  getTimeSeriesWithMA: (data, metric = 'revenue') => {
+    if (!data || data.length === 0) return null;
+
+    // Group by month
+    const monthly = {};
+    data.forEach(row => {
+      const month = row.Date.toISOString().slice(0, 7);
+      monthly[month] = monthly[month] || { revenue: 0, volume: 0 };
+      monthly[month].revenue += row['Total Revenue'] || 0;
+      monthly[month].volume += row['Sales Volume'] || 0;
+    });
+
+    // Convert to arrays for moving averages
+    const months = Object.keys(monthly).sort();
+    const values = months.map(m => [m, monthly[m][metric]]);
+
+    // Calculate moving averages
+    const ma6 = calculationUtils.calculateMovingAverage(values, 6);
+    const ma12 = calculationUtils.calculateMovingAverage(values, 12);
+
+    return {
+      labels: months,
+      values: months.map(m => monthly[m][metric]),
+      ma6: ma6.map(([_, val]) => val),
+      ma12: ma12.map(([_, val]) => val),
+      ma6Start: months.indexOf(ma6[0]?.[0]),
+      ma12Start: months.indexOf(ma12[0]?.[0])
+    };
+  },
+
+  /**
    * Calculate comparison metrics between current and previous period
    * @param {Array} filteredData - Current period data
    * @param {Array} allData - All available data
@@ -100,9 +239,10 @@ export const calculationUtils = {
    */
   calculateMetrics: (filteredData, comparisonMetrics = null) => {
     if (!filteredData || filteredData.length === 0) return null;
-
     const totalRevenue = filteredData.reduce((sum, row) => sum + row['Total Revenue'], 0);
-    const avgRevenue = totalRevenue / filteredData.length;
+    const totalVolume = filteredData.reduce((sum, row) => sum + (row['Sales Volume'] || 0), 0);
+    const avgRevenue = filteredData.length > 0 ? totalRevenue / filteredData.length : 0;
+    const avgRevenuePerUnit = totalVolume > 0 ? totalRevenue / totalVolume : 0;
     
     const monthlyRevenue = {};
     filteredData.forEach(row => {
@@ -125,12 +265,29 @@ export const calculationUtils = {
 
     const topProduct = Object.entries(productRevenue).sort((a, b) => b[1] - a[1])[0];
 
+    // Calculate top agent by revenue and by volume
+    const agentData = filteredData.reduce((acc, row) => {
+      const agent = row['Agent Code'] || 'Unknown';
+      acc[agent] = acc[agent] || { revenue: 0, volume: 0 };
+      acc[agent].revenue += row['Total Revenue'] || 0;
+      acc[agent].volume += row['Sales Volume'] || 0;
+      return acc;
+    }, {});
+
+    const topAgentEntry = Object.entries(agentData)
+      .sort((a, b) => b[1].revenue - a[1].revenue)[0];
+
     return {
       totalRevenue,
+      totalVolume,
       avgRevenue,
+      avgRevenuePerUnit,
       growth,
       topProduct: topProduct ? topProduct[0] : 'N/A',
       topProductRevenue: topProduct ? topProduct[1] : 0,
+      topAgent: topAgentEntry ? topAgentEntry[0] : 'N/A',
+      topAgentRevenue: topAgentEntry ? topAgentEntry[1].revenue : 0,
+      topAgentVolume: topAgentEntry ? topAgentEntry[1].volume : 0,
       uniqueAgents: new Set(filteredData.map(row => row['Agent Code'])).size,
       uniqueRegions: new Set(filteredData.map(row => row['Customer Region'])).size,
       revenueGrowth: comparisonMetrics ? comparisonMetrics.revenueGrowth : 0

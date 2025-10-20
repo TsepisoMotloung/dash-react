@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import * as XLSX from 'xlsx';
-import Plotly from 'plotly.js-dist';
+import React from 'react';
 import {dataUtils} from '../utils/dataUtils';
-import { Lock, UserCheck, Filter, LogOut, Download, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { Lock, UserCheck, Filter, LogOut, Download, TrendingUp, Users, DollarSign, Package } from 'lucide-react';
 
 
 // ============= METRICS CARDS COMPONENT =============
@@ -67,6 +65,45 @@ const MetricsCards = ({ metrics }) => {
           <span className="text-sm text-gray-500">
             {dataUtils.formatCurrency(metrics.topProductRevenue)} revenue
           </span>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-teal-500">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-700">Sales Volume</h3>
+          <Package className="w-8 h-8 text-teal-500" />
+        </div>
+        <p className="text-3xl font-bold text-gray-900 mb-2">
+          {metrics.totalVolume}
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Units sold</span>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-indigo-500">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-700">Avg Revenue / Sale</h3>
+          <DollarSign className="w-8 h-8 text-indigo-500" />
+        </div>
+        <p className="text-3xl font-bold text-gray-900 mb-2">
+          {dataUtils.formatCurrency(metrics.avgRevenuePerUnit)}
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Per unit on average</span>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-pink-500">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-700">Top Sales Agent</h3>
+          <Users className="w-8 h-8 text-pink-500" />
+        </div>
+        <p className="text-xl font-bold text-gray-900 mb-2 truncate">
+          {metrics.topAgent}
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">{dataUtils.formatCurrency(metrics.topAgentRevenue)} • {metrics.topAgentVolume} units</span>
         </div>
       </div>
     </div>

@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import * as XLSX from 'xlsx';
+import { useState, useEffect } from 'react';
 import Plotly from 'plotly.js-dist';
 import { dataUtils } from './utils/dataUtils';
-import { calculationUtils } from './utils/ calculationUtils';
+import { calculationUtils } from './utils/calculationUtils';
 import { chartUtils } from './utils/chartUtils';
-import { ChartTabs, FilterSection, DashboardHeader, LoginForm, MetricsCards, StatsPanel } from './components';
-import { Menu, X, TrendingUp, Calendar, Package, Sunset, MapPin, Users, TrendingDown, BarChart3, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { FilterSection, DashboardHeader, LoginForm, MetricsCards, StatsPanel, ComparisonMetricsCards, Breakdown } from './components';
+import { Menu, X, TrendingUp,Users, TrendingDown, BarChart3, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 
 const SalesDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -40,8 +39,8 @@ const SalesDashboard = () => {
     } catch (error) {
       console.error('Error fetching sales data:', error);
       return [];
-    } 
-  } 
+    }
+  }
 
   useEffect(() => {
     const loadData = async () => {
@@ -51,7 +50,7 @@ const SalesDashboard = () => {
       setData(sampleData);
       setIsLoading(false);
     };
-    
+        
     loadData();
   }, []);
 
@@ -78,7 +77,7 @@ const SalesDashboard = () => {
     if (filteredData && filteredData.length > 0) {
       renderChart();
     }
-  }, [activeTab, filteredData, filters.timeFrame, comparisonMetrics]);
+  }, [activeTab, filteredData, filters.timeFrame]);
 
   const handleLogin = (user) => {
     setIsAuthenticated(true);
@@ -104,7 +103,6 @@ const SalesDashboard = () => {
 
   const applyFilters = () => {
     if (!data) return;
-
     let filtered = [...data];
 
     if (userRole === 'agent') {
@@ -116,19 +114,24 @@ const SalesDashboard = () => {
     if (filters.agentCode && userRole !== 'agent') {
       filtered = filtered.filter(row => row['Agent Code'] === filters.agentCode);
     }
+
     if (filters.brokerCode && userRole === 'supervisor') {
       filtered = filtered.filter(row => row['Broker Code'] === filters.brokerCode);
     }
+
     if (filters.region) {
       filtered = filtered.filter(row => row['Customer Region'] === filters.region);
     }
+
     if (filters.productName) {
       filtered = filtered.filter(row => row['Product Name'] === filters.productName);
     }
+
     if (filters.dateFrom) {
       const fromDate = new Date(filters.dateFrom);
       filtered = filtered.filter(row => row.Date >= fromDate);
     }
+
     if (filters.dateTo) {
       const toDate = new Date(filters.dateTo);
       filtered = filtered.filter(row => row.Date <= toDate);
@@ -139,26 +142,51 @@ const SalesDashboard = () => {
 
   const renderChart = () => {
     if (!filteredData || filteredData.length === 0) return;
-    
+        
     try {
-      const chartElement = document.getElementById('chart');
-      if (!chartElement) return;
-
-      Plotly.purge(chartElement);
-
-      const chartFunctions = {
-        overview: () => chartUtils.createOverviewChart(filteredData),
-        monthly: () => chartUtils.createMonthlyChart(filteredData),
-        products: () => chartUtils.createProductsChart(filteredData),
-        seasonal: () => chartUtils.createSeasonalChart(filteredData),
-        regional: () => chartUtils.createRegionalChart(filteredData),
-        agents: () => chartUtils.createAgentPerformanceChart(filteredData),
-        forecast: () => chartUtils.createForecastChart(filteredData),
-        comparison: () => chartUtils.createComparativeAnalysisChart(filteredData, comparisonMetrics)
-      };
-
-      const chartFunction = chartFunctions[activeTab] || chartFunctions.overview;
-      chartFunction();
+      if (activeTab === 'comparison') {
+        // Render both revenue and volume charts for comparison tab
+        setTimeout(() => {
+          const revenueElement = document.getElementById('revenueChart');
+          const volumeElement = document.getElementById('volumeChart');
+          
+          console.log('Rendering comparison charts...');
+          console.log('Revenue element:', revenueElement);
+          console.log('Volume element:', volumeElement);
+                  
+          if (revenueElement) {
+            Plotly.purge(revenueElement);
+            chartUtils.createComparativeAnalysisChart(filteredData, 'revenue', 'revenueChart');
+            console.log('Revenue chart rendered');
+          } else {
+            console.error('revenueChart element not found in DOM');
+          }
+                  
+          if (volumeElement) {
+            Plotly.purge(volumeElement);
+            chartUtils.createComparativeAnalysisChart(filteredData, 'volume', 'volumeChart');
+            console.log('Volume chart rendered');
+          } else {
+            console.error('volumeChart element not found in DOM');
+          }
+        }, 100);
+      } else {
+        // Render single chart for other tabs
+        const chartElement = document.getElementById('chart');
+        if (!chartElement) return;
+        Plotly.purge(chartElement);
+        const chartFunctions = {
+          overview: () => chartUtils.createOverviewChart(filteredData),
+          monthly: () => chartUtils.createMonthlyChart(filteredData),
+          products: () => chartUtils.createProductsChart(filteredData),
+          seasonal: () => chartUtils.createSeasonalChart(filteredData),
+          regional: () => chartUtils.createRegionalChart(filteredData),
+          agents: () => chartUtils.createAgentPerformanceChart(filteredData),
+          forecast: () => chartUtils.createForecastChart(filteredData)
+        };
+        const chartFunction = chartFunctions[activeTab] || chartFunctions.overview;
+        chartFunction();
+      }
     } catch (error) {
       console.error('Error rendering chart:', error);
     }
@@ -166,7 +194,7 @@ const SalesDashboard = () => {
 
   const exportData = (format) => {
     if (!filteredData) return;
-    
+        
     let content = '';
     let filename = '';
     let mimeType = '';
@@ -174,7 +202,7 @@ const SalesDashboard = () => {
     if (format === 'csv') {
       const headers = Object.keys(filteredData[0]);
       const csvRows = [headers.join(',')];
-      
+            
       filteredData.forEach(row => {
         const values = headers.map(header => {
           const val = row[header];
@@ -185,7 +213,7 @@ const SalesDashboard = () => {
         });
         csvRows.push(values.join(','));
       });
-      
+            
       content = csvRows.join('\n');
       filename = `sales_data_${userRole}_${new Date().toISOString().slice(0,10)}.csv`;
       mimeType = 'text/csv';
@@ -212,10 +240,7 @@ const SalesDashboard = () => {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
-    { id: 'monthly', label: 'Monthly Trends', icon: Calendar },
-    { id: 'products', label: 'Products', icon: Package },
-    { id: 'seasonal', label: 'Seasonal', icon: Sunset },
-    { id: 'regional', label: 'Regional', icon: MapPin },
+    { id: 'breakdown', label: 'Breakdown', icon: BarChart3 },
     { id: 'agents', label: 'Agents', icon: Users },
     { id: 'forecast', label: 'Forecast', icon: TrendingUp },
     { id: 'comparison', label: 'Comparison', icon: TrendingDown }
@@ -252,7 +277,7 @@ const SalesDashboard = () => {
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
-              
+                            
               return (
                 <button
                   key={tab.id}
@@ -260,8 +285,8 @@ const SalesDashboard = () => {
                   className={`
                     w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-2
                     transition-all duration-200 group
-                    ${isActive 
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
+                    ${isActive
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
                       : 'hover:bg-gray-100 text-gray-700'
                     }
                   `}
@@ -305,9 +330,9 @@ const SalesDashboard = () => {
         </button>
 
         <div className="w-full p-4 lg:p-6">
-          <DashboardHeader 
-            userRole={userRole} 
-            userCode={userCode} 
+          <DashboardHeader
+            userRole={userRole}
+            userCode={userCode}
             onLogout={handleLogout}
             onExport={exportData}
           />
@@ -347,9 +372,8 @@ const SalesDashboard = () => {
               </div>
               {showFilters ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
             </button>
-
             {showFilters && (
-              <FilterSection 
+              <FilterSection
                 filters={filters}
                 setFilters={setFilters}
                 userRole={userRole}
@@ -360,37 +384,84 @@ const SalesDashboard = () => {
               />
             )}
           </div>
+            
+          {activeTab === 'overview' && (
+            <MetricsCards metrics={metrics} />
+          )}
 
-          <MetricsCards metrics={metrics} />
+          {activeTab === 'comparison' ? (
+            <>
+              <ComparisonMetricsCards
+                data={filteredData}
+                currentDate={filteredData?.[filteredData.length - 1]?.Date?.toISOString().slice(0, 7)}
+              />
+                            
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">Sales Revenue Trend</h3>
+                  {!filteredData || filteredData.length === 0 ? (
+                    <div className="flex items-center justify-center h-96">
+                      <div className="text-center">
+                        <p className="text-gray-600 text-xl">No data available</p>
+                        <p className="text-gray-500 text-sm mt-2">Try adjusting your filters</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div id="revenueChart" className="w-full" style={{ height: '400px' }}></div>
+                  )}
+                </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            {!data ? (
-              <div className="flex items-center justify-center h-96">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto mb-4"></div>
-                  <p className="text-gray-600 text-lg">Loading data...</p>
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">Sales Volume Trend</h3>
+                  {!filteredData || filteredData.length === 0 ? (
+                    <div className="flex items-center justify-center h-96">
+                      <div className="text-center">
+                        <p className="text-gray-600 text-xl">No data available</p>
+                        <p className="text-gray-500 text-sm mt-2">Try adjusting your filters</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div id="volumeChart" className="w-full" style={{ height: '400px' }}></div>
+                  )}
                 </div>
               </div>
-            ) : !filteredData ? (
-              <div className="flex items-center justify-center h-96">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto mb-4"></div>
-                  <p className="text-gray-600 text-lg">Processing data...</p>
+            </>
+          ) : (
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+              {!data ? (
+                <div className="flex items-center justify-center h-96">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto mb-4"></div>
+                    <p className="text-gray-600 text-lg">Loading data...</p>
+                  </div>
                 </div>
-              </div>
-            ) : filteredData.length === 0 ? (
-              <div className="flex items-center justify-center h-96">
-                <div className="text-center">
-                  <p className="text-gray-600 text-xl">No data available for current filters</p>
-                  <p className="text-gray-500 text-sm mt-2">Try adjusting your filter settings</p>
+              ) : !filteredData ? (
+                <div className="flex items-center justify-center h-96">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto mb-4"></div>
+                    <p className="text-gray-600 text-lg">Processing data...</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div id="chart" className="w-full" style={{ height: '600px' }}></div>
-            )}
-          </div>
+              ) : filteredData.length === 0 ? (
+                <div className="flex items-center justify-center h-96">
+                  <div className="text-center">
+                    <p className="text-gray-600 text-xl">No data available for current filters</p>
+                    <p className="text-gray-500 text-sm mt-2">Try adjusting your filter settings</p>
+                  </div>
+                </div>
+              ) : (
+                <div id="chart" className="w-full" style={{ height: '600px' }}></div>
+              )}
+            </div>
+          )}
 
-          <StatsPanel filteredData={filteredData} userRole={userRole} />
+          {activeTab === 'overview' && (
+            <StatsPanel filteredData={filteredData} userRole={userRole} />
+          )}
+
+          {activeTab === 'breakdown' && (
+            <Breakdown filteredData={filteredData} />
+          )}
         </div>
       </main>
     </div>
