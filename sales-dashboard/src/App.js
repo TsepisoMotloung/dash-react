@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import * as XLSX from 'xlsx';
+
 import Plotly from 'plotly.js-dist';
 import { dataUtils } from './utils/dataUtils';
 import { calculationUtils } from './utils/calculationUtils';
 import { chartUtils } from './utils/chartUtils';
 import { ChartTabs, FilterSection, DashboardHeader, LoginForm, MetricsCards, StatsPanel, ComparisonMetricsCards, Breakdown } from './components';
-import { Menu, X, TrendingUp, Calendar, Package, Sunset, MapPin, Users, TrendingDown, BarChart3, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { Menu, X, TrendingUp,  Users, TrendingDown, BarChart3, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 
 const SalesDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
